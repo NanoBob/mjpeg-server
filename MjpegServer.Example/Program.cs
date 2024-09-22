@@ -5,7 +5,8 @@ using MjpegServer.Sources;
 var port = 50808;
 
 var video = new CameraVideoSource();
-var streamer = new MjpegStreamer(video, new WindowsJpegEncoder(60), port);
+//var streamer = new MjpegStreamer(video, new WindowsJpegEncoder(60), port);
+var streamer = new MjpegStreamer(video, new OpencvJpegEncoder(), port);
 
 streamer.Start();
 Console.WriteLine($"Started on http://127.0.0.1:{port}");

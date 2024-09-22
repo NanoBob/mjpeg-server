@@ -5,8 +5,10 @@ namespace MjpegServer;
 
 public class ConnectedClient
 {
-    private readonly ConcurrentQueue<byte[]> frames = [];
     private readonly Socket socket;
+
+    private readonly object lastFrameLock = new();
+    private byte[]? lastFrame;
 
     public bool IsConnected { get; private set; } = true;
 
@@ -22,7 +24,7 @@ public class ConnectedClient
         if (!this.IsConnected)
             throw new Exception("Socket disconnected");
 
-        this.frames.Enqueue(data);
+        socket.Send(data);
     }
 
     private async void Run()
@@ -31,10 +33,12 @@ public class ConnectedClient
         {
             while (IsConnected)
             {
-                while (this.frames.TryDequeue(out var frame))
+                if (this.lastFrame != null)
                 {
-                    socket.Send(frame);
+                    socket.Send(this.lastFrame);
+                    this.lastFrame = null;
                 }
+                await Task.Delay(1);
             }
         }
         catch (SocketException)

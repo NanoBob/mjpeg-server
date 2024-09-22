@@ -59,48 +59,52 @@ public class MjpegStreamer
         {
             var socket = await this.server.AcceptSocketAsync();
 
-            socket.Send(firstResponseHeader);
-            this.connectedSockets.Add(new ConnectedClient(socket));
+            try
+            {
+                socket.Send(firstResponseHeader);
+                this.connectedSockets.Add(new ConnectedClient(socket));
+            } catch (Exception)
+            {
+
+            }
         }
     }
 
     private void BroadcastNewFrame(object? sender, FrameAvailableEventArgs e)
     {
-        try
+        var image = this.jpegEncoder.EncodeFrame(e.Frame);
+
+        var header = $"""
+
+            {boundary}
+            Content-Type: image/jpeg
+            Content-Length: {image.Length}
+
+
+        """;
+
+        var fullFrame = System.Text.Encoding.UTF8.GetBytes(header)
+                .Concat(image)
+                .Concat(System.Text.Encoding.UTF8.GetBytes("\r\n"))
+                .ToArray();
+
+        var sockets = this.connectedSockets.ToArray();
+        foreach (var socket in sockets)
         {
-            var image = this.jpegEncoder.EncodeFrame(e.Frame);
-
-            var header = $"""
-
-                {boundary}
-                Content-Type: image/jpeg
-                Content-Length: {image.Length}
-
-
-            """;
-
-            var fullFrame = System.Text.Encoding.UTF8.GetBytes(header)
-                    .Concat(image.GetBuffer())
-                    .Concat(System.Text.Encoding.UTF8.GetBytes("\r\n"))
-                    .ToArray();
-
-            var sockets = this.connectedSockets.ToArray();
-            foreach (var socket in sockets)
+            try
             {
-                try
-                {
-                    socket.EnqueueFrame(fullFrame);
-                }
-                catch (SocketException socketException)
-                {
-                    this.connectedSockets.Remove(socket);
-                    Console.WriteLine($"Disconnected\n{socketException.Message}");
-                }
+                socket.EnqueueFrame(fullFrame);
             }
-        }
-        catch (Exception exception)
-        {
-            Console.WriteLine(exception.Message);
+            catch (SocketException socketException)
+            {
+                this.connectedSockets.Remove(socket);
+                Console.WriteLine($"Disconnected\n{socketException.Message}");
+            }
+            catch (Exception exception)
+            {
+                this.connectedSockets.Remove(socket);
+                Console.WriteLine(exception.Message);
+            }
         }
     }
 }

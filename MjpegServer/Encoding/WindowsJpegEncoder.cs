@@ -33,13 +33,16 @@ public class WindowsJpegEncoder : IJpegEncoder, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    public MemoryStream EncodeFrame(Mat frame)
+    public byte[] EncodeFrame(Mat frame)
     {
-        var frameStream = new MemoryStream();
+        using var frameStream = new MemoryStream();
 
         var image = frame.ToBitmap();
         image.Save(frameStream, this.encoder, this.parameters);
 
-        return frameStream;
+        var buffer = new byte[frameStream.Length];
+        frameStream.Read(buffer, 0, buffer.Length);
+
+        return buffer;
     }
 }

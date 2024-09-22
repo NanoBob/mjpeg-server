@@ -4,5 +4,5 @@ namespace MjpegServer.Encoding;
 
 public interface IJpegEncoder
 {
-    MemoryStream EncodeFrame(Mat frame);
+    byte[] EncodeFrame(Mat frame);
 }
